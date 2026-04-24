@@ -111,7 +111,19 @@ function recommend(cat){
   setTimeout(()=>alert('😍 También te puede gustar: '+r.name),1000);
  }
 }
+<h3>➕ Agregar producto (solo tú)</h3>
 
+<input id="pname" placeholder="Nombre" class="input">
+<input id="pprice" placeholder="Precio" class="input">
+<input id="pimg" placeholder="Link de imagen" class="input">
+
+<select id="pcat" class="input">
+<option value="ropa">Ropa</option>
+<option value="hogar">Hogar</option>
+<option value="viral">Viral</option>
+</select>
+
+<button class="btn" onclick="addProduct()">Agregar producto</button>
 function build(){
  let n=document.getElementById('name').value;
  let a=document.getElementById('addr').value;
@@ -171,6 +183,25 @@ function notify(text){
 render();
 renderOrders();
 </script>
+ function addProduct(){
+ let name = document.getElementById('pname').value;
+ let price = document.getElementById('pprice').value;
+ let img = document.getElementById('pimg').value;
+ let cat = document.getElementById('pcat').value;
 
+ if(!name || !price || !img){
+  alert('Completa todo');
+  return;
+ }
+
+ let newProduct = {name, price:parseInt(price), img, cat};
+
+ products.push(newProduct);
+ localStorage.setItem('products', JSON.stringify(products));
+
+ render();
+
+ alert('Producto agregado 😍');
+}
 </body>
   </html>
