@@ -8,10 +8,10 @@
 <style>
 :root{--pink:#e91e63;--bg:#fff0f5;}
 body{font-family:Arial;margin:0;background:var(--bg);}
-.header{position:sticky;top:0;background:#fff;padding:10px;display:flex;gap:10px;align-items:center}
-.logo{color:var(--pink);font-weight:bold;font-size:18px}
+.header{background:#fff;padding:10px;display:flex;gap:10px;align-items:center}
+.logo{color:var(--pink);font-weight:bold}
 .search{flex:1;padding:8px;border-radius:20px;border:1px solid #ccc}
-.cat{display:flex;gap:6px;overflow:auto;padding:8px}
+.cat{display:flex;gap:6px;padding:10px}
 .cat button{border:none;padding:6px 10px;border-radius:10px;background:#eee}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:10px}
 .card{background:#fff;border-radius:15px;overflow:hidden}
@@ -19,10 +19,8 @@ body{font-family:Arial;margin:0;background:var(--bg);}
 .info{padding:8px}
 .price{color:var(--pink);font-weight:bold}
 .btn{background:var(--pink);color:#fff;border:none;padding:6px;border-radius:10px;width:100%}
-.bottom{position:fixed;bottom:0;width:100%;background:#fff;padding:10px;box-shadow:0 -2px 6px rgba(0,0,0,.1)}
 .input{width:100%;padding:8px;margin-top:5px;border-radius:10px;border:1px solid #ccc}
-.status{font-size:11px;padding:2px 6px;border-radius:8px}
-.p{background:#ffe082}.e{background:#81d4fa}.t{background:#a5d6a7}
+.bottom{position:fixed;bottom:0;width:100%;background:#fff;padding:10px}
 </style>
 </head>
 
@@ -43,16 +41,21 @@ body{font-family:Arial;margin:0;background:var(--bg);}
 <div class="grid" id="products"></div>
 
 <div style="padding:10px">
-<h3>📦 Datos</h3>
+<h3>➕ Agregar producto</h3>
+<input id="pname" class="input" placeholder="Nombre">
+<input id="pprice" class="input" placeholder="Precio">
+<input id="pimg" class="input" placeholder="Link imagen">
+<select id="pcat" class="input">
+<option value="ropa">Ropa</option>
+<option value="hogar">Hogar</option>
+<option value="viral">Viral</option>
+</select>
+<button class="btn" onclick="addProduct()">Agregar</button>
+
+<h3>📦 Datos cliente</h3>
 <input id="name" class="input" placeholder="Nombre">
 <input id="addr" class="input" placeholder="Dirección">
 <input id="phone" class="input" placeholder="Teléfono">
-
-<h3>🚚 Envío</h3>
-<select id="envio" class="input">
-<option value="Entrega local">Entrega local</option>
-<option value="Envío $80">Envío $80</option>
-</select>
 
 <h3>🧾 Pedidos</h3>
 <div id="orders"></div>
@@ -64,9 +67,10 @@ Total: $<span id="total">0</span>
 </div>
 
 <script>
-let products = [
+
+// 🔥 PRODUCTOS (se guardan en el celular)
+let products = JSON.parse(localStorage.getItem('products')) || [
  {name:'Blusa floral', price:199, cat:'ropa', img:'https://via.placeholder.com/200'},
- {name:'Vestido casual', price:349, cat:'ropa', img:'https://via.placeholder.com/200'},
  {name:'Organizador maquillaje', price:149, cat:'hogar', img:'https://via.placeholder.com/200'},
  {name:'Luz LED espejo', price:199, cat:'viral', img:'https://via.placeholder.com/200'}
 ];
@@ -75,6 +79,7 @@ let cart = [];
 let orders = JSON.parse(localStorage.getItem('orders')) || [];
 let currentCat = 'all';
 
+// 🛍️ MOSTRAR PRODUCTOS
 function render(list=products){
  let c=document.getElementById('products');
  c.innerHTML='';
@@ -91,99 +96,35 @@ function render(list=products){
  });
 }
 
+// 🔍 FILTRO
 function filterCat(cat){currentCat=cat;render();}
-function search(t){render(products.filter(p=>p.name.toLowerCase().includes(t.toLowerCase())))}
+function search(t){
+ render(products.filter(p=>p.name.toLowerCase().includes(t.toLowerCase())))
+}
 
+// ➕ AGREGAR AL CARRITO
 function add(n,p,c){
  cart.push({n,p,c});
  update();
  recommend(c);
 }
 
+// 💰 TOTAL
 function update(){
  document.getElementById('total').innerText = cart.reduce((s,x)=>s+x.p,0);
 }
 
+// 🤖 RECOMENDACIÓN
 function recommend(cat){
  let similares = products.filter(p=>p.cat===cat);
  if(similares.length){
   let r = similares[Math.floor(Math.random()*similares.length)];
-  setTimeout(()=>alert('😍 También te puede gustar: '+r.name),1000);
- }
-}
-<h3>➕ Agregar producto (solo tú)</h3>
-
-<input id="pname" placeholder="Nombre" class="input">
-<input id="pprice" placeholder="Precio" class="input">
-<input id="pimg" placeholder="Link de imagen" class="input">
-
-<select id="pcat" class="input">
-<option value="ropa">Ropa</option>
-<option value="hogar">Hogar</option>
-<option value="viral">Viral</option>
-</select>
-
-<button class="btn" onclick="addProduct()">Agregar producto</button>
-function build(){
- let n=document.getElementById('name').value;
- let a=document.getElementById('addr').value;
- let t=document.getElementById('phone').value;
- let envio=document.getElementById('envio').value;
-
- let txt='';
- cart.forEach(x=>txt+=`- ${x.n} $${x.p} `);
-
- return {txt,total:document.getElementById('total').innerText,n,a,t,envio};
-}
-
-function buy(){
- let o=build();
-
- orders.push({...o,status:'pendiente'});
- localStorage.setItem('orders',JSON.stringify(orders));
-
- notify('Nuevo pedido 🛍️');
- renderOrders();
-
- let msg=`Pedido:%0A${o.txt}%0ATotal:$${o.total}%0A${o.n}%0A${o.a}%0A${o.t}`;
- window.open(`https://wa.me/5214921263187?text=${msg}`);
-
- cart=[];update();
-}
-
-function renderOrders(){
- let el=document.getElementById('orders');
- el.innerHTML='';
- orders.forEach((o,i)=>{
-  el.innerHTML+=`
-  <div>
-   ${o.txt} | $${o.total}
-   <span class="status ${o.status==='pendiente'?'p':o.status==='enviado'?'e':'t'}">${o.status}</span>
-   <button onclick="setStatus(${i},'enviado')">Enviar</button>
-   <button onclick="setStatus(${i},'entregado')">OK</button>
-  </div>`;
- });
-}
-
-function setStatus(i,s){
- orders[i].status=s;
- localStorage.setItem('orders',JSON.stringify(orders));
- renderOrders();
-}
-
-// 🔔 NOTIFICACIONES
-function notify(text){
- if(Notification.permission==='granted'){
-  new Notification(text);
- } else {
-  Notification.requestPermission();
+  setTimeout(()=>alert('😍 También te puede gustar: '+r.name),800);
  }
 }
 
-render();
-renderOrders();
-</script>
- function addProduct(){
+// 🧠 PANEL AGREGAR PRODUCTO
+function addProduct(){
  let name = document.getElementById('pname').value;
  let price = document.getElementById('pprice').value;
  let img = document.getElementById('pimg').value;
@@ -195,13 +136,54 @@ renderOrders();
  }
 
  let newProduct = {name, price:parseInt(price), img, cat};
-
  products.push(newProduct);
+
  localStorage.setItem('products', JSON.stringify(products));
 
  render();
 
  alert('Producto agregado 😍');
 }
+
+// 🧾 CREAR PEDIDO
+function buy(){
+ let n=document.getElementById('name').value;
+ let a=document.getElementById('addr').value;
+ let t=document.getElementById('phone').value;
+
+ let txt='';
+ cart.forEach(x=>txt+=`- ${x.n} $${x.p} `);
+
+ let order = {txt,total:document.getElementById('total').innerText,n,a,t,status:'pendiente'};
+
+ orders.push(order);
+ localStorage.setItem('orders',JSON.stringify(orders));
+
+ renderOrders();
+
+ let msg=`Pedido:%0A${txt}%0ATotal:$${order.total}%0A${n}%0A${a}%0A${t}`;
+ window.open(`https://wa.me/5214921263187?text=${msg}`);
+
+ cart=[];update();
+}
+
+// 📦 MOSTRAR PEDIDOS
+function renderOrders(){
+ let el=document.getElementById('orders');
+ el.innerHTML='';
+ orders.forEach((o,i)=>{
+  el.innerHTML+=`
+  <div>
+   ${o.txt} | $${o.total} (${o.status})
+  </div>`;
+ });
+}
+
+// 🚀 INICIO
+render();
+renderOrders();
+
+</script>
+
 </body>
-  </html>
+ </html>
