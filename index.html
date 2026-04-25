@@ -1,197 +1,70 @@
-import { useEffect, useState } from "react";
-import { ShoppingCart, Lock } from "lucide-react";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chacharitas Pro</title>
 
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, getDocs } from "firebase/firestore";
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
 
-// 🔥 TU CONFIG (ya correcta)
+<style>
+body{font-family:sans-serif;background:#fafafa;margin:0}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:10px}
+.card{background:#fff;padding:10px;border-radius:10px}
+.btn{background:#ff3e7f;color:#fff;border:none;padding:8px;border-radius:8px;width:100%}
+</style>
+</head>
+
+<body>
+
+<h2 style="padding:10px">🛍️ Chacharitas</h2>
+
+<div class="grid" id="products"></div>
+
+<div style="padding:10px">
+<input id="name" placeholder="Nombre">
+<input id="price" placeholder="Precio">
+<input id="img" placeholder="Imagen URL">
+<button class="btn" onclick="addProduct()">Agregar</button>
+</div>
+
+<script>
 const firebaseConfig = {
   apiKey: "AIzaSyA_hpSH4b8pcrOXSvwe62CGYgBrPFdXalo",
   authDomain: "chacharitasstore.firebaseapp.com",
-  projectId: "chacharitasstore",
-  storageBucket: "chacharitasstore.firebasestorage.app",
-  messagingSenderId: "620718659571",
-  appId: "1:620718659571:web:6f2c28258a5af08a666486"
+  projectId: "chacharitasstore"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-export default function App() {
-  const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]);
-  const [admin, setAdmin] = useState(false);
-  const [filter, setFilter] = useState("all");
-
-  const [form, setForm] = useState({
-    name: "",
-    price: "",
-    img: "",
-    cat: "ropa"
-  });
-
-  // 🔥 CARGAR PRODUCTOS DESDE FIREBASE
-  const loadProducts = async () => {
-    const querySnapshot = await getDocs(collection(db, "products"));
-    const list = [];
-
-    querySnapshot.forEach((doc) => {
-      list.push({ id: doc.id, ...doc.data() });
-    });
-
-    setProducts(list);
-  };
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  // ➕ AGREGAR PRODUCTO
-  const addProduct = async () => {
-    if (!form.name || !form.price || !form.img) {
-      alert("Completa todo");
-      return;
-    }
-
-    await addDoc(collection(db, "products"), {
-      name: form.name,
-      price: Number(form.price),
-      img: form.img,
-      cat: form.cat
-    });
-
-    alert("Producto guardado en Firebase 🚀");
-
-    setForm({ name: "", price: "", img: "", cat: "ropa" });
-
-    loadProducts();
-  };
-
-  // 🛒 CARRITO
-  const addToCart = (p) => setCart([...cart, p]);
-  const total = cart.reduce((a, b) => a + b.price, 0);
-
-  // 💳 (AÚN SIMULADO)
-  const checkout = () => {
-    alert("Aquí irá MercadoPago 💳");
-  };
-
-  // 🔐 ADMIN
-  const login = () => {
-    const pass = prompt("Clave admin");
-    if (pass === "1234") setAdmin(true);
-  };
-
-  const filtered = products.filter(
-    (p) => filter === "all" || p.cat === filter
-  );
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-
-      {/* HEADER */}
-      <div className="flex justify-between p-4 bg-white shadow">
-        <h1 className="text-pink-500 font-bold">🛍️ Chacharitas Pro</h1>
-        <button onClick={login} className="bg-black text-white px-3 py-1 rounded flex items-center gap-1">
-          <Lock size={14} /> Admin
-        </button>
-      </div>
-
-      {/* CATEGORÍAS */}
-      <div className="flex gap-2 p-3 overflow-x-auto">
-        {["all", "ropa", "hogar", "viral"].map((c) => (
-          <button
-            key={c}
-            onClick={() => setFilter(c)}
-            className="px-3 py-1 bg-gray-200 rounded-full"
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-
-      {/* PRODUCTOS */}
-      <div className="grid grid-cols-2 gap-3 p-3">
-        {filtered.map((p) => (
-          <div key={p.id} className="bg-white rounded-xl shadow">
-            <img src={p.img} className="h-36 w-full object-cover" />
-            <div className="p-2">
-              <h2 className="text-sm font-medium">{p.name}</h2>
-              <p className="text-pink-500 font-bold">${p.price}</p>
-              <button
-                onClick={() => addToCart(p)}
-                className="w-full bg-pink-500 text-white py-1 rounded"
-              >
-                Agregar
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* PANEL ADMIN */}
-      {admin && (
-        <div className="p-4 bg-white m-3 rounded-xl shadow">
-          <h2 className="font-bold mb-2">📱 Panel Admin</h2>
-
-          <input
-            className="w-full p-2 border mb-2"
-            placeholder="Nombre"
-            value={form.name}
-            onChange={(e) =>
-              setForm({ ...form, name: e.target.value })
-            }
-          />
-
-          <input
-            className="w-full p-2 border mb-2"
-            placeholder="Precio"
-            value={form.price}
-            onChange={(e) =>
-              setForm({ ...form, price: e.target.value })
-            }
-          />
-
-          <input
-            className="w-full p-2 border mb-2"
-            placeholder="Imagen URL"
-            value={form.img}
-            onChange={(e) =>
-              setForm({ ...form, img: e.target.value })
-            }
-          />
-
-          <select
-            className="w-full p-2 border mb-2"
-            value={form.cat}
-            onChange={(e) =>
-              setForm({ ...form, cat: e.target.value })
-            }
-          >
-            <option value="ropa">Ropa</option>
-            <option value="hogar">Hogar</option>
-            <option value="viral">Viral</option>
-          </select>
-
-          <button
-            onClick={addProduct}
-            className="w-full bg-black text-white py-2 rounded"
-          >
-            Guardar producto
-          </button>
-        </div>
-      )}
-
-      {/* CARRITO */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white p-3 flex justify-between">
-        <div>🛒 ${total}</div>
-        <button
-          onClick={checkout}
-          className="bg-pink-500 text-white px-4 py-2 rounded"
-        >
-          Pagar 💳
-        </button>
-      </div>
-    </div>
-  );
+async function loadProducts(){
+ let snap = await db.collection("products").get();
+ let html='';
+ snap.forEach(doc=>{
+  let p = doc.data();
+  html+=`
+  <div class="card">
+   <img src="${p.img}" width="100%">
+   <h4>${p.name}</h4>
+   <b>$${p.price}</b>
+  </div>`;
+ });
+ document.getElementById("products").innerHTML=html;
 }
+
+async function addProduct(){
+ let name=document.getElementById("name").value;
+ let price=parseInt(document.getElementById("price").value);
+ let img=document.getElementById("img").value;
+
+ await db.collection("products").add({name,price,img});
+ loadProducts();
+}
+
+loadProducts();
+</script>
+
+</body>
+</html>
