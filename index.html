@@ -3,67 +3,219 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chacharitas Pro</title>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"></script>
+<title>Chacharitas Store</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <style>
-body{font-family:sans-serif;background:#fafafa;margin:0}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:10px}
-.card{background:#fff;padding:10px;border-radius:10px}
-.btn{background:#ff3e7f;color:#fff;border:none;padding:8px;border-radius:8px;width:100%}
+body{font-family:'Poppins',sans-serif;margin:0;background:#fafafa}
+
+/* HEADER */
+.header{
+display:flex;
+justify-content:space-between;
+padding:10px;
+background:#fff;
+box-shadow:0 2px 10px rgba(0,0,0,.05)
+}
+.logo{font-weight:700;color:#ff3e7f;font-size:18px}
+
+/* GRID */
+.grid{
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:10px;
+padding:10px
+}
+.card{
+background:#fff;
+border-radius:12px;
+padding:10px;
+box-shadow:0 4px 10px rgba(0,0,0,.05)
+}
+.card img{width:100%;border-radius:10px}
+
+/* BUTTON */
+.btn{
+background:#ff3e7f;
+color:#fff;
+border:none;
+padding:8px;
+border-radius:10px;
+width:100%;
+margin-top:5px;
+}
+
+/* CART */
+.cart{
+position:fixed;
+bottom:0;
+width:100%;
+background:#fff;
+display:flex;
+justify-content:space-between;
+padding:10px;
+box-shadow:0 -2px 10px rgba(0,0,0,.1)
+}
+
+/* ADMIN */
+#admin{display:none;padding:10px;background:#fff;margin:10px;border-radius:10px}
+
+.input{width:100%;padding:8px;margin-top:5px}
 </style>
 </head>
 
 <body>
 
-<h2 style="padding:10px">🛍️ Chacharitas</h2>
+<div class="header">
+<div class="logo">🛍️ Chacharitas</div>
+<button onclick="login()">Admin</button>
+</div>
 
 <div class="grid" id="products"></div>
 
-<div style="padding:10px">
-<input id="name" placeholder="Nombre">
-<input id="price" placeholder="Precio">
-<input id="img" placeholder="Imagen URL">
+<div id="admin">
+<h3>Panel Admin</h3>
+<input id="name" class="input" placeholder="Nombre">
+<input id="price" class="input" placeholder="Precio">
+<input id="img" class="input" placeholder="Imagen">
+<select id="cat" class="input">
+<option>ropa</option>
+<option>hogar</option>
+<option>viral</option>
+</select>
 <button class="btn" onclick="addProduct()">Agregar</button>
+
+<h3>Pedidos</h3>
+<div id="orders"></div>
+</div>
+
+<div class="cart">
+<div>🛒 $<span id="total">0</span></div>
+<button class="btn" onclick="checkout()">Comprar</button>
 </div>
 
 <script>
+
+// 🔥 FIREBASE
 const firebaseConfig = {
-  apiKey: "AIzaSyA_hpSH4b8pcrOXSvwe62CGYgBrPFdXalo",
-  authDomain: "chacharitasstore.firebaseapp.com",
-  projectId: "chacharitasstore"
+apiKey:"AIzaSy...",
+authDomain:"chacharitasstore.firebaseapp.com",
+projectId:"chacharitasstore"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// 🛒
+let cart=[];
+
+// 📦 CARGAR PRODUCTOS
 async function loadProducts(){
- let snap = await db.collection("products").get();
- let html='';
- snap.forEach(doc=>{
-  let p = doc.data();
-  html+=`
-  <div class="card">
-   <img src="${p.img}" width="100%">
-   <h4>${p.name}</h4>
-   <b>$${p.price}</b>
-  </div>`;
- });
- document.getElementById("products").innerHTML=html;
+let snap = await db.collection("products").get();
+let html='';
+snap.forEach(doc=>{
+let p = doc.data();
+
+html+=`
+<div class="card">
+<img src="${p.img}">
+<h4>${p.name}</h4>
+<b>$${p.price}</b>
+
+<button class="btn" onclick="addCart('${p.name}',${p.price})">Agregar</button>
+<button class="btn" onclick="buyNow('${p.name}',${p.price})">Comprar</button>
+
+</div>`;
+});
+
+document.getElementById("products").innerHTML=html;
 }
 
+// 🛒 AGREGAR AL CARRITO
+function addCart(n,p){
+cart.push({n,p});
+updateTotal();
+recommend();
+}
+
+// 💰 TOTAL
+function updateTotal(){
+let t=cart.reduce((a,b)=>a+b.p,0);
+document.getElementById("total").innerText=t;
+}
+
+// 🤖 RECOMENDACIÓN
+function recommend(){
+setTimeout(()=>alert("🔥 Producto recomendado añadido 😍"),500);
+}
+
+// 💳 COMPRA
+function checkout(){
+
+let envio = confirm("¿Entrega local? Cancelar = envío +$80");
+let envioCosto = envio ? 0 : 80;
+
+let total = cart.reduce((a,b)=>a+b.p,0)+envioCosto;
+
+let txt = cart.map(x=>`- ${x.n} $${x.p}`).join("%0A");
+
+let msg=`Pedido:%0A${txt}%0ATotal:$${total}`;
+
+window.open(`https://wa.me/5214921263187?text=${msg}`);
+
+// guardar pedido
+db.collection("orders").add({txt,total});
+
+cart=[];
+updateTotal();
+}
+
+// ⚡ COMPRA DIRECTA
+function buyNow(n,p){
+cart=[{n,p}];
+checkout();
+}
+
+// ➕ AGREGAR PRODUCTO
 async function addProduct(){
- let name=document.getElementById("name").value;
- let price=parseInt(document.getElementById("price").value);
- let img=document.getElementById("img").value;
 
- await db.collection("products").add({name,price,img});
- loadProducts();
+let name=document.getElementById("name").value;
+let price=parseInt(document.getElementById("price").value);
+let img=document.getElementById("img").value;
+let cat=document.getElementById("cat").value;
+
+await db.collection("products").add({name,price,img,cat});
+loadProducts();
 }
 
+// 🔐 ADMIN
+function login(){
+let pass=prompt("Clave admin");
+if(pass==="1234"){
+document.getElementById("admin").style.display="block";
+loadOrders();
+}
+}
+
+// 📦 VER PEDIDOS
+async function loadOrders(){
+let snap=await db.collection("orders").get();
+let html='';
+snap.forEach(doc=>{
+let o=doc.data();
+html+=`<div>${o.txt} | $${o.total}</div>`;
+});
+document.getElementById("orders").innerHTML=html;
+}
+
+// 🚀 INIT
 loadProducts();
+
 </script>
 
 </body>
