@@ -11,32 +11,42 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <style>
-body{font-family:'Poppins',sans-serif;margin:0;background:#f6f6f6}
+body{font-family:'Poppins',sans-serif;margin:0;background:#f5f5f5}
 
 /* HEADER */
 .header{
 display:flex;
-justify-content:space-between;
-align-items:center;
-padding:12px;
+flex-direction:column;
+padding:10px;
 background:#fff;
 box-shadow:0 2px 10px rgba(0,0,0,.05)
 }
-.logo{font-weight:700;color:#ff2e74;font-size:18px}
+.top{
+display:flex;
+justify-content:space-between;
+align-items:center
+}
+.logo{color:#ff2e74;font-weight:700}
+.search{
+margin-top:8px;
+padding:10px;
+border-radius:20px;
+border:1px solid #ddd;
+width:100%
+}
 
 /* CATEGORÍAS */
 .cat{
 display:flex;
 gap:8px;
 padding:10px;
-overflow-x:auto;
+overflow-x:auto
 }
 .cat button{
 border:none;
 padding:6px 12px;
 border-radius:20px;
-background:#eee;
-font-size:12px
+background:#eee
 }
 
 /* GRID */
@@ -51,11 +61,16 @@ padding:10px
 background:#fff;
 border-radius:14px;
 overflow:hidden;
-box-shadow:0 4px 10px rgba(0,0,0,.05)
+transform:scale(.95);
+opacity:0;
+animation:fade .4s forwards;
+}
+
+@keyframes fade{
+to{opacity:1;transform:scale(1)}
 }
 
 .card img{width:100%;height:160px;object-fit:cover}
-
 .info{padding:8px}
 .price{color:#ff2e74;font-weight:bold}
 
@@ -69,24 +84,7 @@ width:100%;
 margin-top:5px
 }
 
-/* ADMIN */
-.admin{
-display:none;
-background:#fff;
-margin:10px;
-padding:10px;
-border-radius:10px
-}
-
-.input{
-width:100%;
-padding:8px;
-margin-top:5px;
-border-radius:8px;
-border:1px solid #ccc
-}
-
-/* CARRITO */
+/* CART */
 .cart{
 position:fixed;
 bottom:0;
@@ -97,14 +95,21 @@ justify-content:space-between;
 padding:10px;
 box-shadow:0 -2px 10px rgba(0,0,0,.1)
 }
+
+/* ADMIN */
+.admin{display:none;background:#fff;margin:10px;padding:10px;border-radius:10px}
+.input{width:100%;padding:8px;margin-top:5px}
 </style>
 </head>
 
 <body>
 
 <div class="header">
+<div class="top">
 <div class="logo">🛍️ Chacharitas</div>
 <button onclick="login()">Admin</button>
+</div>
+<input class="search" placeholder="Buscar productos..." onkeyup="search(this.value)">
 </div>
 
 <div class="cat">
@@ -121,25 +126,22 @@ box-shadow:0 -2px 10px rgba(0,0,0,.1)
 <!-- ADMIN -->
 <div class="admin" id="admin">
 <h3>Panel Admin</h3>
-
 <input id="name" class="input" placeholder="Nombre">
 <input id="price" class="input" placeholder="Precio">
-<input id="img" class="input" placeholder="Link de imagen">
-<select id="cat" class="input">
+<input id="img" class="input" placeholder="Link imagen">
+<select id="cat">
 <option value="moda">Moda</option>
 <option value="hogar">Hogar</option>
 <option value="deportes">Deportes</option>
 <option value="tendencias">Tendencias</option>
 <option value="viral">Viral</option>
 </select>
+<button class="btn" onclick="addProduct()">Agregar</button>
 
-<button class="btn" onclick="addProduct()">Agregar producto</button>
-
-<h3>Productos</h3>
-<div id="adminProducts"></div>
+<h3>Pedidos</h3>
+<div id="orders"></div>
 </div>
 
-<!-- CARRITO -->
 <div class="cart">
 <div>🛒 $<span id="total">0</span></div>
 <button class="btn" onclick="checkout()">Comprar</button>
@@ -147,121 +149,126 @@ box-shadow:0 -2px 10px rgba(0,0,0,.1)
 
 <script>
 
-// 🔥 FIREBASE
-const firebaseConfig = {
- apiKey:"AIzaSy...",
- authDomain:"chacharitasstore.firebaseapp.com",
- projectId:"chacharitasstore"
+const firebaseConfig={
+apiKey:"AIzaSy...",
+authDomain:"chacharitasstore.firebaseapp.com",
+projectId:"chacharitasstore"
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const db=firebase.firestore();
 
 let cart=[];
 let currentCat="all";
+let allProducts=[];
 
-// 📦 CARGAR PRODUCTOS
+// 🔥 CARGAR
 async function loadProducts(){
- let snap = await db.collection("products").get();
- let html='';
+let snap=await db.collection("products").get();
+allProducts=[];
+snap.forEach(doc=>allProducts.push(doc.data()));
+render(allProducts);
+}
 
- snap.forEach(doc=>{
-  let p = doc.data();
+// 🎨 RENDER
+function render(list){
+let html='';
+list.forEach(p=>{
+ if(currentCat!="all" && p.cat!=currentCat) return;
 
-  if(currentCat!="all" && p.cat!=currentCat) return;
+ html+=`
+ <div class="card">
+ <img src="${p.img}">
+ <div class="info">
+ <div>${p.name}</div>
+ <div class="price">$${p.price}</div>
+ <button class="btn" onclick="addCart('${p.name}',${p.price},'${p.cat}')">Agregar</button>
+ </div>
+ </div>`;
+});
+document.getElementById("products").innerHTML=html;
+}
 
-  html+=`
-  <div class="card">
-   <img src="${p.img}">
-   <div class="info">
-    <div>${p.name}</div>
-    <div class="price">$${p.price}</div>
-    <button class="btn" onclick="addCart('${p.name}',${p.price})">Agregar</button>
-   </div>
-  </div>`;
- });
-
- document.getElementById("products").innerHTML=html;
+// 🔍 BUSCADOR
+function search(txt){
+let f=allProducts.filter(p=>p.name.toLowerCase().includes(txt.toLowerCase()));
+render(f);
 }
 
 // 🛒 CARRITO
-function addCart(n,p){
- cart.push({n,p});
- document.getElementById("total").innerText =
- cart.reduce((a,b)=>a+b.p,0);
+function addCart(n,p,c){
+cart.push({n,p,c});
+update();
+recommend(c);
 }
 
-// 💳 COMPRA (WHATSAPP)
-function checkout(){
- let envio = confirm("¿Entrega local? Cancelar = envío +$80");
- let envioCosto = envio ? 0 : 80;
-
- let total = cart.reduce((a,b)=>a+b.p,0)+envioCosto;
-
- let txt = cart.map(x=>`- ${x.n} $${x.p}`).join("%0A");
-
- let msg=`Pedido:%0A${txt}%0ATotal:$${total}`;
-
- window.open(`https://wa.me/5214921263187?text=${msg}`);
-
- cart=[];
- document.getElementById("total").innerText=0;
+// 💰 TOTAL
+function update(){
+document.getElementById("total").innerText=
+cart.reduce((a,b)=>a+b.p,0);
 }
 
-// ➕ AGREGAR PRODUCTO
+// 🤖 RECOMENDACIONES
+function recommend(cat){
+let r=allProducts.filter(p=>p.cat==cat);
+if(r.length){
+let p=r[Math.floor(Math.random()*r.length)];
+setTimeout(()=>alert("🔥 También te puede gustar: "+p.name),600);
+}
+}
+
+// 💳 COMPRA + PEDIDO
+async function checkout(){
+let envio=confirm("¿Entrega local? Cancelar = envío +$80");
+let envioCosto=envio?0:80;
+
+let total=cart.reduce((a,b)=>a+b.p,0)+envioCosto;
+let txt=cart.map(x=>`- ${x.n} $${x.p}`).join("%0A");
+
+await db.collection("orders").add({txt,total});
+
+window.open(`https://wa.me/5214921263187?text=Pedido:%0A${txt}%0ATotal:$${total}`);
+
+cart=[];update();
+}
+
+// ➕ PRODUCTO
 async function addProduct(){
- let name=name.value;
- let price=parseInt(price.value);
- let img=img.value;
- let cat=cat.value;
-
- await db.collection("products").add({name,price,img,cat});
-
- loadProducts();
- loadAdminProducts();
+await db.collection("products").add({
+name:name.value,
+price:parseInt(price.value),
+img:img.value,
+cat:cat.value
+});
+loadProducts();
 }
 
 // 🔐 ADMIN
 function login(){
- let pass=prompt("Clave admin");
- if(pass==="1234"){
-  document.getElementById("admin").style.display="block";
-  loadAdminProducts();
- }
+let p=prompt(3312);
+if(p==="1234"){
+admin.style.display="block";
+loadOrders();
+}
 }
 
-// 🛠️ ADMIN PRODUCTOS
-async function loadAdminProducts(){
- let snap=await db.collection("products").get();
- let html='';
-
- snap.forEach(doc=>{
-  let p=doc.data();
-
-  html+=`
-  <div>
-  ${p.name} $${p.price}
-  <button onclick="deleteP('${doc.id}')">❌</button>
-  </div>`;
- });
-
- document.getElementById("adminProducts").innerHTML=html;
-}
-
-// ❌ ELIMINAR
-async function deleteP(id){
- await db.collection("products").doc(id).delete();
- loadProducts();
- loadAdminProducts();
+// 📦 PEDIDOS
+async function loadOrders(){
+let snap=await db.collection("orders").get();
+let html='';
+snap.forEach(doc=>{
+let o=doc.data();
+html+=`<div>${o.txt} | $${o.total}</div>`;
+});
+orders.innerHTML=html;
 }
 
 // 🔍 FILTRO
-function filter(cat){
- currentCat=cat;
- loadProducts();
+function filter(c){
+currentCat=c;
+render(allProducts);
 }
 
-// 🚀 INIT
 loadProducts();
 
 </script>
